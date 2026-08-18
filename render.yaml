@@ -15,7 +15,7 @@ services:
         fromService:
           type: web
           name: taskmanager-llm
-          property: host
+          property: hostport
       - key: VAPID_PUBLIC_KEY
         sync: false
       - key: VAPID_PRIVATE_KEY

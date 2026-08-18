@@ -25,7 +25,10 @@ router.use(auth);
 // POST /api/chat/classify — classify text or image via LLM
 router.post('/classify', upload.single('image'), async (req, res) => {
   try {
-    const llmUrl = process.env.LLM_SERVICE_URL || 'http://localhost:8000';
+    let llmUrl = process.env.LLM_SERVICE_URL || 'http://localhost:8000';
+    if (!llmUrl.startsWith('http://') && !llmUrl.startsWith('https://')) {
+      llmUrl = `http://${llmUrl}`;
+    }
     let response;
 
     if (req.file) {
