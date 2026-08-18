@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createTask, updateTask } from '../services/api';
+import { XIcon, CollegeIcon, JobIcon, StudyIcon } from './Icons';
 
 export default function TaskModal({ task, defaultCategory, onClose, onSaved }) {
   const isEditing = !!task;
@@ -73,7 +74,7 @@ export default function TaskModal({ task, defaultCategory, onClose, onSaved }) {
         <div className="modal-header">
           <h2>{isEditing ? 'Edit Task' : 'New Task'}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">
-            ✕
+            <XIcon size={18} />
           </button>
         </div>
 
@@ -119,7 +120,10 @@ export default function TaskModal({ task, defaultCategory, onClose, onSaved }) {
                   className={`category-option ${cat.toLowerCase()} ${category === cat ? 'selected' : ''}`}
                   onClick={() => setCategory(cat)}
                 >
-                  {cat === 'College' ? '🎓' : cat === 'Job' ? '💼' : '📖'} {cat}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                    {cat === 'College' ? <CollegeIcon size={16} /> : cat === 'Job' ? <JobIcon size={16} /> : <StudyIcon size={16} />}
+                    {cat}
+                  </span>
                 </button>
               ))}
             </div>

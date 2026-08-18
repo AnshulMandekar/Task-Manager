@@ -3,11 +3,12 @@ import { useLocation } from 'react-router-dom';
 import { getTasks } from '../services/api';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
+import { CollegeIcon, JobIcon, StudyIcon } from './Icons';
 
 const categoryMeta = {
-  college: { name: 'College', icon: '🎓', emoji: '📚' },
-  job: { name: 'Job', icon: '💼', emoji: '🏢' },
-  study: { name: 'Study', icon: '📖', emoji: '🧠' },
+  college: { name: 'College', icon: <CollegeIcon size={28} />, emoji: <CollegeIcon size={48} /> },
+  job: { name: 'Job', icon: <JobIcon size={28} />, emoji: <JobIcon size={48} /> },
+  study: { name: 'Study', icon: <StudyIcon size={28} />, emoji: <StudyIcon size={48} /> },
 };
 
 export default function ListView() {

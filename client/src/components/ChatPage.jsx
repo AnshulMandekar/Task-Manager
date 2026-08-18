@@ -7,6 +7,19 @@ import {
   sendChatMessage
 } from '../services/api';
 import { useToast } from './Toast';
+import {
+  ChatIcon,
+  PlusIcon,
+  TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  SparklesIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  PaperclipIcon,
+  CameraIcon,
+  SendIcon
+} from './Icons';
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState([]);
@@ -153,7 +166,7 @@ export default function ChatPage() {
       // Check if a task was auto-saved and trigger toast
       const lastMsg = response.messages[response.messages.length - 1];
       if (lastMsg && lastMsg.taskResult && lastMsg.taskResult.category) {
-        showToast(`✅ Task saved to ${lastMsg.taskResult.category}`, 'success');
+        showToast(`Task saved to ${lastMsg.taskResult.category}`, 'success');
       }
     } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== 'typing'));
@@ -193,10 +206,10 @@ export default function ChatPage() {
 
   // Quick suggestions chips
   const suggestions = [
-    { label: "What should I do today? 📅", text: "what work should i do today?" },
-    { label: "What Job tasks are pending? 💼", text: "What work is pending regarding job?" },
-    { label: "What Study tasks are pending? 📚", text: "What work is pending regarding study?" },
-    { label: "Help me prioritize ⚡", text: "Help me analyze my task list and suggest how to prioritize." }
+    { label: "What should I do today?", text: "what work should i do today?" },
+    { label: "What Job tasks are pending?", text: "What work is pending regarding job?" },
+    { label: "What Study tasks are pending?", text: "What work is pending regarding study?" },
+    { label: "Help me prioritize", text: "Help me analyze my task list and suggest how to prioritize." }
   ];
 
   // Helper to format assistant response (bold, lists)
@@ -237,9 +250,13 @@ export default function ChatPage() {
       {/* Sidebar Panel for Sessions */}
       <div className={`chat-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
-          <h3>💬 Chat History</h3>
+          <h3 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <ChatIcon size={16} /> Chat History
+          </h3>
           <button className="new-chat-btn" onClick={handleNewChat} title="New Conversation">
-            ＋ New Chat
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+              <PlusIcon size={14} /> New Chat
+            </span>
           </button>
         </div>
         <div className="sessions-list">
@@ -249,14 +266,17 @@ export default function ChatPage() {
               className={`session-item ${activeSessionId === session._id ? 'active' : ''}`}
               onClick={() => loadSession(session._id)}
             >
-              <span className="session-icon">💬</span>
+              <span className="session-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <ChatIcon size={14} />
+              </span>
               <span className="session-title" title={session.title}>{session.title}</span>
               <button
                 className="delete-session-btn"
                 onClick={(e) => handleDeleteSession(session._id, e)}
                 title="Delete Chat"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                🗑️
+                <TrashIcon size={14} />
               </button>
             </div>
           ))}
@@ -271,11 +291,15 @@ export default function ChatPage() {
               className="sidebar-toggle-btn"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               title="Toggle Sidebar"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
-              {isSidebarOpen ? '◀' : '▶'} History
+              {isSidebarOpen ? <ChevronLeftIcon size={14} /> : <ChevronRightIcon size={14} />}
+              <span>History</span>
             </button>
             <div>
-              <h1>✨ AI Task Assistant</h1>
+              <h1 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <SparklesIcon size={20} style={{ color: 'var(--primary)' }} /> AI Task Assistant
+              </h1>
               <p>Ask about your tasks, check deadlines, or upload assignment pictures</p>
             </div>
           </div>
@@ -310,10 +334,10 @@ export default function ChatPage() {
                           {msg.taskResult.description}
                         </p>
                       )}
-                      <div className="task-meta">
+                      <div className="task-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         {msg.taskResult.dueDate ? (
-                          <span className="task-due">
-                            🕐 Due: {new Date(msg.taskResult.dueDate).toLocaleDateString('en-US', {
+                          <span className="task-due" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <ClockIcon size={12} /> Due: {new Date(msg.taskResult.dueDate).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
                               hour: 'numeric',
@@ -321,9 +345,13 @@ export default function ChatPage() {
                             })}
                           </span>
                         ) : (
-                          <span className="task-due no-due">🕐 No due date</span>
+                          <span className="task-due no-due" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <ClockIcon size={12} /> No due date
+                          </span>
                         )}
-                        <span className="task-saved-badge">✓ Auto-saved to List</span>
+                        <span className="task-saved-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircleIcon size={12} style={{ color: 'var(--success)' }} /> Auto-saved to List
+                        </span>
                       </div>
                     </div>
                   )}
@@ -356,9 +384,10 @@ export default function ChatPage() {
         <div className="chat-input-area">
           <div style={{ flex: 1 }}>
             {imageFile && (
-              <div className="chat-image-pending">
-                📎 {imageFile.name}
-                <button onClick={clearImage}>Remove</button>
+              <div className="chat-image-pending" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <PaperclipIcon size={14} />
+                <span>{imageFile.name}</span>
+                <button onClick={clearImage} style={{ marginLeft: 'auto' }}>Remove</button>
               </div>
             )}
             <div className="chat-input-wrapper">
@@ -367,8 +396,9 @@ export default function ChatPage() {
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Upload image"
                 title="Upload an image"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                📷
+                <CameraIcon size={18} />
               </button>
               <textarea
                 ref={textInputRef}
@@ -396,8 +426,9 @@ export default function ChatPage() {
             disabled={isProcessing || (!input.trim() && !imageFile)}
             aria-label="Send message"
             id="chat-send-btn"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            ➤
+            <SendIcon size={18} />
           </button>
         </div>
       </div>

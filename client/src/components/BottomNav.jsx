@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
+import { HomeIcon, CollegeIcon, JobIcon, StudyIcon, ChatIcon } from './Icons';
 
 const navItems = [
-  { to: '/', icon: '🏠', label: 'Home' },
-  { to: '/college', icon: '🎓', label: 'College' },
-  { to: '/job', icon: '💼', label: 'Job' },
-  { to: '/study', icon: '📖', label: 'Study' },
-  { to: '/chat', icon: '✨', label: 'AI Chat', isChat: true },
+  { to: '/', icon: <HomeIcon size={20} />, label: 'Home' },
+  { to: '/college', icon: <CollegeIcon size={20} />, label: 'College' },
+  { to: '/job', icon: <JobIcon size={20} />, label: 'Job' },
+  { to: '/study', icon: <StudyIcon size={20} />, label: 'Study' },
+  { to: '/chat', icon: <ChatIcon size={20} />, label: 'AI Chat', isChat: true },
 ];
 
 export default function BottomNav() {

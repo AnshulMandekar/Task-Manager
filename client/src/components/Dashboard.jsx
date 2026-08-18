@@ -4,6 +4,8 @@ import { getTodayTasks, getTasks } from '../services/api';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import NotificationPrompt from './NotificationPrompt';
+import { ClipboardIcon } from './Icons';
+
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -66,7 +68,7 @@ export default function Dashboard() {
   return (
     <>
       <div className="dashboard-greeting">
-        <h1>{greeting}, {user?.username} 👋</h1>
+        <h1>{greeting}, {user?.username}</h1>
         <div className="date-text">{dateStr}</div>
       </div>
 
@@ -111,7 +113,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="empty-state">
-          <div className="empty-state-icon">🎉</div>
+          <div className="empty-state-icon"><ClipboardIcon size={40} /></div>
           <h3>Nothing due today!</h3>
           <p>Enjoy your free time, or add a new task to get ahead.</p>
         </div>

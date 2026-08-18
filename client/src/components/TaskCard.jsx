@@ -1,4 +1,5 @@
 import { updateTask, deleteTask } from '../services/api';
+import { ClockIcon, TrashIcon } from './Icons';
 
 export default function TaskCard({ task, onUpdate, onDelete, onEdit, style }) {
   const isDone = task.status === 'done';
@@ -91,7 +92,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onEdit, style }) {
           </span>
           {dueLabel && (
             <span className={`task-due ${dueLabel.className}`}>
-              🕐 {dueLabel.text}
+              <ClockIcon size={12} /> {dueLabel.text}
             </span>
           )}
         </div>
@@ -104,7 +105,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onEdit, style }) {
           aria-label="Delete task"
           title="Delete"
         >
-          🗑
+          <TrashIcon size={16} />
         </button>
       </div>
     </div>

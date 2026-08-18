@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getVapidPublicKey, subscribePush } from '../services/api';
+import { BellIcon } from './Icons';
 
 export default function NotificationPrompt() {
   const [show, setShow] = useState(false);
@@ -61,7 +62,7 @@ export default function NotificationPrompt() {
 
   return (
     <div className="notification-prompt" id="notification-prompt">
-      <span className="notification-prompt-icon">🔔</span>
+      <BellIcon size={24} className="notification-prompt-icon" style={{ color: 'var(--primary)', flexShrink: 0 }} />
       <div className="notification-prompt-text">
         <h4>Enable Notifications</h4>
         <p>Get reminders for upcoming and overdue tasks</p>
