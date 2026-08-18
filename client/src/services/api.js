@@ -23,6 +23,7 @@ async function request(endpoint, options = {}) {
     config.headers['Content-Type'] = 'application/json';
   }
 
+  console.log(`[API Request] Fetching: ${API_BASE}${endpoint}`);
   const res = await fetch(`${API_BASE}${endpoint}`, config);
 
   if (res.status === 401) {
@@ -38,7 +39,7 @@ async function request(endpoint, options = {}) {
     try {
       data = await res.json();
     } catch (e) {
-      console.error('Error parsing JSON response:', e);
+      console.error('[API Error] Error parsing JSON response:', e);
     }
   }
 
@@ -48,6 +49,7 @@ async function request(endpoint, options = {}) {
   }
 
   if (data === null) {
+    console.error(`[API Error] Expected JSON response but received Content-Type: "${contentType}". Status: ${res.status}`);
     throw new Error('Server returned an empty or invalid response');
   }
 
