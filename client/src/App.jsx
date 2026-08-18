@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
@@ -49,6 +50,13 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Ping API server to wake it and the LLM service up from sleep in the background
+    const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const API_BASE = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+    fetch(`${API_BASE}/health`).catch(() => {});
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>

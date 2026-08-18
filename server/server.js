@@ -4,6 +4,7 @@ const cors = require('cors');
 const cron = require('node-cron');
 const path = require('path');
 require('dotenv').config();
+const axios = require('axios');
 
 const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks');
@@ -27,6 +28,12 @@ app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
+  const llmUrl = process.env.LLM_SERVICE_URL || 'http://localhost:8000';
+  const cleanLlmUrl = (llmUrl.startsWith('http://') || llmUrl.startsWith('https://')) ? llmUrl : `http://${llmUrl}`;
+  
+  // Fire-and-forget background ping to wake up the LLM service
+  axios.get(cleanLlmUrl).catch(() => {});
+
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
