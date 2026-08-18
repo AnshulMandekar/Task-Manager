@@ -1,6 +1,7 @@
 services:
   - type: web
     name: taskmanager-api
+    plan: free
     runtime: node
     rootDir: server
     buildCommand: npm install
@@ -26,6 +27,7 @@ services:
 
   - type: web
     name: taskmanager-llm
+    plan: free
     runtime: python
     rootDir: llm-service
     buildCommand: pip install -r requirements.txt
