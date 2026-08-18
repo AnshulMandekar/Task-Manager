@@ -1,19 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { classifyTask, createTask } from '../services/api';
+import {
+  getChatSessions,
+  createChatSession,
+  getChatSession,
+  deleteChatSession,
+  sendChatMessage
+} from '../services/api';
 import { useToast } from './Toast';
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: 'Hi! 👋 Tell me about a task or upload an image, and I\'ll categorize it for you.\n\nExamples:\n• "Submit CS201 homework by Friday"\n• "Prepare for job interview next Monday"\n• Upload a photo of an assignment sheet',
-    },
-  ]);
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -21,8 +24,71 @@ export default function ChatPage() {
   const showToast = useToast();
 
   useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  async function fetchSessions() {
+    try {
+      const data = await getChatSessions();
+      setSessions(data);
+      if (data.length > 0) {
+        // Load the most recent session
+        loadSession(data[0]._id);
+      } else {
+        // Automatically create a new session if none exist
+        await handleNewChat();
+      }
+    } catch (err) {
+      showToast('Failed to load chat history', 'error');
+    }
+  }
+
+  async function loadSession(id) {
+    try {
+      setActiveSessionId(id);
+      const data = await getChatSession(id);
+      setMessages(data.messages || []);
+    } catch (err) {
+      showToast('Failed to load chat messages', 'error');
+    }
+  }
+
+  async function handleNewChat() {
+    try {
+      const newSession = await createChatSession('New Chat');
+      setSessions(prev => [newSession, ...prev]);
+      setActiveSessionId(newSession._id);
+      setMessages(newSession.messages || []);
+      showToast('Started a new chat session', 'success');
+    } catch (err) {
+      showToast('Failed to start new chat', 'error');
+    }
+  }
+
+  async function handleDeleteSession(id, e) {
+    e.stopPropagation();
+    if (!window.confirm('Delete this conversation? All messages will be lost.')) return;
+    try {
+      await deleteChatSession(id);
+      const updated = sessions.filter(s => s._id !== id);
+      setSessions(updated);
+      showToast('Conversation deleted', 'success');
+      
+      if (activeSessionId === id) {
+        if (updated.length > 0) {
+          loadSession(updated[0]._id);
+        } else {
+          handleNewChat();
+        }
+      }
+    } catch (err) {
+      showToast('Failed to delete conversation', 'error');
+    }
+  }
 
   function handleImageSelect(e) {
     const file = e.target.files?.[0];
@@ -43,12 +109,13 @@ export default function ChatPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  async function handleSend() {
-    const text = input.trim();
+  async function handleSend(overrideText = null) {
+    const text = (overrideText !== null ? overrideText : input).trim();
     if (!text && !imageFile) return;
     if (isProcessing) return;
+    if (!activeSessionId) return;
 
-    // Add user message
+    // Add user message locally for instant response feel
     const userMsg = {
       id: Date.now().toString(),
       role: 'user',
@@ -69,39 +136,31 @@ export default function ChatPage() {
     setMessages(prev => [...prev, typingMsg]);
 
     try {
-      const result = await classifyTask(text || null, currentImageFile || null);
+      const response = await sendChatMessage(activeSessionId, text || null, currentImageFile || null);
 
-      // Remove typing indicator and add result
-      setMessages(prev => prev.filter(m => m.id !== 'typing'));
+      // Remove typing indicator and sync full messages history
+      setMessages(response.messages || []);
 
-      const resultMsg = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `I've categorized this task for you:`,
-        taskResult: result,
-      };
-      setMessages(prev => [...prev, resultMsg]);
+      // If the session title was previously "New Chat", rename it locally
+      const activeSession = sessions.find(s => s._id === activeSessionId);
+      if (activeSession && activeSession.title === 'New Chat') {
+        const newTitle = text ? (text.length > 20 ? text.substring(0, 20) + '...' : text) : 'Image Task';
+        setSessions(prev =>
+          prev.map(s => (s._id === activeSessionId ? { ...s, title: newTitle } : s))
+        );
+      }
 
-      // Auto-save the task
-      try {
-        await createTask({
-          title: result.title,
-          description: result.description || '',
-          category: result.category,
-          dueDate: result.dueDate || null,
-          source: currentImageFile ? 'chat-image' : 'chat-text',
-        });
-
-        showToast(`✅ Task saved to ${result.category}`, 'success');
-      } catch (saveErr) {
-        showToast('Failed to save task: ' + saveErr.message, 'error');
+      // Check if a task was auto-saved and trigger toast
+      const lastMsg = response.messages[response.messages.length - 1];
+      if (lastMsg && lastMsg.taskResult && lastMsg.taskResult.category) {
+        showToast(`✅ Task saved to ${lastMsg.taskResult.category}`, 'success');
       }
     } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== 'typing'));
       const errorMsg = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `Sorry, I couldn't classify that. ${err.message}. Please try again.`,
+        content: `Sorry, I couldn't process that. ${err.message}. Please try again.`,
         isError: true,
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -123,109 +182,224 @@ export default function ChatPage() {
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
   }
 
+  // Handle suggestion click
+  async function handleSuggestionClick(text) {
+    if (isProcessing) return;
+    setInput(text);
+    setTimeout(() => {
+      handleSend(text);
+    }, 50);
+  }
+
+  // Quick suggestions chips
+  const suggestions = [
+    { label: "What should I do today? 📅", text: "what work should i do today?" },
+    { label: "What Job tasks are pending? 💼", text: "What work is pending regarding job?" },
+    { label: "What Study tasks are pending? 📚", text: "What work is pending regarding study?" },
+    { label: "Help me prioritize ⚡", text: "Help me analyze my task list and suggest how to prioritize." }
+  ];
+
+  // Helper to format assistant response (bold, lists)
+  function formatContent(text) {
+    if (!text) return '';
+    // Format bold text
+    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Format bullet points
+    formatted = formatted.replace(/^\s*[-•]\s*(.*?)$/gm, '<li>$1</li>');
+    // Wrap lists in ul
+    if (formatted.includes('<li>')) {
+      // Find lists and wrap them
+      const lines = formatted.split('\n');
+      let inList = false;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().startsWith('<li>')) {
+          if (!inList) {
+            lines[i] = '<ul>' + lines[i];
+            inList = true;
+          }
+        } else {
+          if (inList) {
+            lines[i - 1] = lines[i - 1] + '</ul>';
+            inList = false;
+          }
+        }
+      }
+      if (inList) {
+        lines[lines.length - 1] = lines[lines.length - 1] + '</ul>';
+      }
+      formatted = lines.join('\n');
+    }
+    return <div dangerouslySetInnerHTML={{ __html: formatted }} className="chat-bubble-text" />;
+  }
+
   return (
-    <div className="chat-container">
-      <div className="chat-header">
-        <h1>✨ AI Task Assistant</h1>
-        <p>Type a task or upload an image to auto-categorize</p>
-      </div>
-
-      <div className="chat-messages">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`chat-message ${msg.role}`}>
-            {msg.isTyping ? (
-              <div className="chat-bubble">
-                <div className="typing-indicator">
-                  <span></span><span></span><span></span>
-                </div>
-              </div>
-            ) : (
-              <div className="chat-bubble">
-                {msg.image && (
-                  <img src={msg.image} alt="Uploaded" className="chat-image-preview" />
-                )}
-                <div style={{ whiteSpace: 'pre-line' }}>{msg.content}</div>
-                {msg.taskResult && (
-                  <div className="chat-task-result">
-                    <h4>{msg.taskResult.title}</h4>
-                    {msg.taskResult.description && (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        {msg.taskResult.description}
-                      </p>
-                    )}
-                    <div className="task-meta">
-                      <span className={`task-category-chip ${msg.taskResult.category.toLowerCase()}`}>
-                        {msg.taskResult.category}
-                      </span>
-                      {msg.taskResult.dueDate && (
-                        <span className="task-due">
-                          🕐 {new Date(msg.taskResult.dueDate).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: 8 }}>
-                      ✓ Auto-saved
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="chat-input-area">
-        <div style={{ flex: 1 }}>
-          {imageFile && (
-            <div className="chat-image-pending">
-              📎 {imageFile.name}
-              <button onClick={clearImage}>Remove</button>
-            </div>
-          )}
-          <div className="chat-input-wrapper">
-            <button
-              className="chat-upload-btn"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Upload image"
-              title="Upload an image"
+    <div className="chat-layout">
+      {/* Sidebar Panel for Sessions */}
+      <div className={`chat-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+        <div className="sidebar-header">
+          <h3>💬 Chat History</h3>
+          <button className="new-chat-btn" onClick={handleNewChat} title="New Conversation">
+            ＋ New Chat
+          </button>
+        </div>
+        <div className="sessions-list">
+          {sessions.map((session) => (
+            <div
+              key={session._id}
+              className={`session-item ${activeSessionId === session._id ? 'active' : ''}`}
+              onClick={() => loadSession(session._id)}
             >
-              📷
+              <span className="session-icon">💬</span>
+              <span className="session-title" title={session.title}>{session.title}</span>
+              <button
+                className="delete-session-btn"
+                onClick={(e) => handleDeleteSession(session._id, e)}
+                title="Delete Chat"
+              >
+                🗑️
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Chat Container */}
+      <div className="chat-main">
+        <div className="chat-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              className="sidebar-toggle-btn"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              title="Toggle Sidebar"
+            >
+              {isSidebarOpen ? '◀' : '▶'} History
             </button>
-            <textarea
-              ref={textInputRef}
-              className="chat-text-input"
-              placeholder="Describe a task or ask anything..."
-              value={input}
-              onChange={(e) => { setInput(e.target.value); autoResize(e); }}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              id="chat-text-input"
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              style={{ display: 'none' }}
-              id="chat-image-input"
-            />
+            <div>
+              <h1>✨ AI Task Assistant</h1>
+              <p>Ask about your tasks, check deadlines, or upload assignment pictures</p>
+            </div>
           </div>
         </div>
-        <button
-          className="chat-send-btn"
-          onClick={handleSend}
-          disabled={isProcessing || (!input.trim() && !imageFile)}
-          aria-label="Send message"
-          id="chat-send-btn"
-        >
-          ➤
-        </button>
+
+        <div className="chat-messages">
+          {messages.map((msg, index) => (
+            <div key={msg.id || index} className={`chat-message ${msg.role}`}>
+              {msg.isTyping ? (
+                <div className="chat-bubble">
+                  <div className="typing-indicator">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              ) : (
+                <div className="chat-bubble">
+                  {msg.image && (
+                    <img src={msg.image} alt="Uploaded" className="chat-image-preview" />
+                  )}
+                  {formatContent(msg.content)}
+                  
+                  {msg.taskResult && msg.taskResult.title && msg.taskResult.category && (
+                    <div className="chat-task-result">
+                      <div className="task-result-header">
+                        <h4>{msg.taskResult.title}</h4>
+                        <span className={`task-category-chip ${msg.taskResult.category.toLowerCase()}`}>
+                          {msg.taskResult.category}
+                        </span>
+                      </div>
+                      {msg.taskResult.description && (
+                        <p className="task-result-desc">
+                          {msg.taskResult.description}
+                        </p>
+                      )}
+                      <div className="task-meta">
+                        {msg.taskResult.dueDate ? (
+                          <span className="task-due">
+                            🕐 Due: {new Date(msg.taskResult.dueDate).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        ) : (
+                          <span className="task-due no-due">🕐 No due date</span>
+                        )}
+                        <span className="task-saved-badge">✓ Auto-saved to List</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {/* Render suggestion chips only if there's only 1 welcome message */}
+          {messages.length <= 1 && !isProcessing && (
+            <div className="chat-suggestions">
+              <p className="suggestions-prompt">Quick tasks queries:</p>
+              <div className="suggestions-chips-grid">
+                {suggestions.map((s, idx) => (
+                  <button
+                    key={idx}
+                    className="suggestion-chip"
+                    onClick={() => handleSuggestionClick(s.text)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="chat-input-area">
+          <div style={{ flex: 1 }}>
+            {imageFile && (
+              <div className="chat-image-pending">
+                📎 {imageFile.name}
+                <button onClick={clearImage}>Remove</button>
+              </div>
+            )}
+            <div className="chat-input-wrapper">
+              <button
+                className="chat-upload-btn"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Upload image"
+                title="Upload an image"
+              >
+                📷
+              </button>
+              <textarea
+                ref={textInputRef}
+                className="chat-text-input"
+                placeholder="Describe a task or ask anything..."
+                value={input}
+                onChange={(e) => { setInput(e.target.value); autoResize(e); }}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                id="chat-text-input"
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                style={{ display: 'none' }}
+                id="chat-image-input"
+              />
+            </div>
+          </div>
+          <button
+            className="chat-send-btn"
+            onClick={() => handleSend()}
+            disabled={isProcessing || (!input.trim() && !imageFile)}
+            aria-label="Send message"
+            id="chat-send-btn"
+          >
+            ➤
+          </button>
+        </div>
       </div>
     </div>
   );

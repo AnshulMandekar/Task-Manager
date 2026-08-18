@@ -101,7 +101,46 @@ export async function deleteTask(id) {
   });
 }
 
-// ─── Chat / Classify ──────────────────────────
+// ─── Chat / Sessions ──────────────────────────
+export async function getChatSessions() {
+  return request('/chat/sessions');
+}
+
+export async function createChatSession(title = 'New Chat') {
+  return request('/chat/sessions', {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function getChatSession(id) {
+  return request(`/chat/sessions/${id}`);
+}
+
+export async function deleteChatSession(id) {
+  return request(`/chat/sessions/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function sendChatMessage(sessionId, text, imageFile) {
+  if (imageFile) {
+    const formData = new FormData();
+    if (text) formData.append('text', text);
+    formData.append('image', imageFile);
+    return request(`/chat/sessions/${sessionId}/messages`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  return request(`/chat/sessions/${sessionId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+}
+
+// ─── Legacy Chat / Classify ───────────────────
 export async function classifyTask(text, imageFile) {
   if (imageFile) {
     const formData = new FormData();

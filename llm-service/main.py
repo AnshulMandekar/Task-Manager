@@ -180,3 +180,152 @@ async def classify_json(body: dict):
             status_code=500,
             detail=f"LLM classification failed: {str(e)}",
         )
+
+
+SYSTEM_CHAT_PROMPT = """You are a helpful and intelligent task assistant. You have access to the user's current list of tasks.
+Today is {today}.
+
+Here is the user's current list of tasks in JSON format:
+{tasks_context}
+
+Your job is to assist the user by answering questions about their tasks, summarizing their work, or identifying new tasks to add.
+
+Intent classification and actions:
+1. If the user wants to ADD a new task (e.g. "Add a task to submit homework by Friday", "remind me to prepare for interview", "new task: buy milk"):
+   Set "action" to "create_task" and extract:
+     - title: short, clear title (max 100 chars)
+     - description: optional description
+     - category: exactly one of: "College", "Job", "Study"
+     - dueDate: ISO 8601 date string if mentioned or can be inferred (relative to today's date {today}). Use null if no date is mentioned.
+   Also provide a friendly response in "reply" confirming that you are adding the task.
+
+2. If the user is asking questions about their tasks (e.g. "what should I do today?", "what is pending for Job?", "do I have any exams?"):
+   Set "action" to "reply", and answer their question accurately based on the tasks list provided above. Show dates clearly, list task titles, and format it nicely using Markdown (bullet points, bolding).
+   - If they ask about "today", check if the task's due date matches today's date {today} (ignoring time or comparing range).
+   - If they ask about "pending", check tasks where status is "pending".
+
+3. If the user is asking a generic question or having a general conversation (e.g. "how can I study better?", "hello", "what is machine learning?"):
+   Set "action" to "reply", and answer their question or converse with them in a helpful, friendly manner.
+
+You must respond ONLY with valid JSON in this exact structure, no extra commentary, no markdown code fences:
+{{
+  "action": "create_task" | "reply",
+  "reply": "Your response to the user...",
+  "task": {{
+    "title": "...",
+    "description": "...",
+    "category": "College" | "Job" | "Study",
+    "dueDate": "ISO 8601 date string or null"
+  }}
+}}
+If "action" is "reply", set "task": null."""
+
+
+def parse_chat_response(text: str) -> dict:
+    """Parse the chat LLM response, ensuring structure is correct."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+        text = text.strip()
+
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        json_match = re.search(r"\{[^{}]*\}", text, re.DOTALL)
+        if json_match:
+            try:
+                result = json.loads(json_match.group())
+            except Exception:
+                return {
+                    "action": "reply",
+                    "reply": text,
+                    "task": None
+                }
+        else:
+            return {
+                "action": "reply",
+                "reply": text,
+                "task": None
+            }
+
+    action = result.get("action", "reply")
+    reply = result.get("reply", "")
+    task_data = result.get("task")
+
+    if action not in ("create_task", "reply"):
+        action = "reply"
+
+    if action == "create_task" and task_data:
+        title = str(task_data.get("title", "Untitled Task"))[:200]
+        description = str(task_data.get("description", ""))[:1000]
+        category = str(task_data.get("category", "Study"))
+        if category not in ("College", "Job", "Study"):
+            category = "Study"
+        due_date = task_data.get("dueDate")
+        if due_date and due_date != "null" and due_date != "None":
+            try:
+                datetime.fromisoformat(str(due_date).replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                due_date = None
+        else:
+            due_date = None
+        
+        return {
+            "action": "create_task",
+            "reply": reply,
+            "task": {
+                "title": title,
+                "description": description,
+                "category": category,
+                "dueDate": due_date
+            }
+        }
+    
+    return {
+        "action": "reply",
+        "reply": reply,
+        "task": None
+    }
+
+
+@app.post("/chat-query")
+async def chat_query(body: dict):
+    message = body.get("message")
+    history = body.get("history", [])
+    tasks = body.get("tasks", [])
+    
+    if not message:
+        raise HTTPException(status_code=400, detail="Provide 'message' for the chat.")
+
+    today = datetime.now().strftime("%Y-%m-%d (%A)")
+    
+    # Format tasks list as context
+    tasks_context = json.dumps(tasks, default=str, indent=2)
+    
+    # Format the prompt instructions
+    prompt = SYSTEM_CHAT_PROMPT.format(today=today, tasks_context=tasks_context)
+    
+    # Construct the contents list for Gemini
+    contents = [prompt]
+    
+    # Append recent conversation history
+    recent_history = history[-10:] if len(history) > 10 else history
+    for msg in recent_history:
+        role_label = "User" if msg.get("role") == "user" else "Assistant"
+        contents.append(f"\n{role_label}: {msg.get('content')}")
+        
+    # Append the current message
+    contents.append(f"\nUser: {message}")
+    contents.append("\nAssistant response (JSON format):")
+
+    try:
+        response = gemini_model.generate_content(contents)
+        result = parse_chat_response(response.text)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"LLM chat failed: {str(e)}",
+        )
+
