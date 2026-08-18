@@ -1,0 +1,16 @@
+{
+  "name": "todo-list-taskmanager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal Task Manager with MERN + LLM Auto-Categorization",
+  "scripts": {
+    "install-all": "cd server && npm install && cd ../client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev:llm": "cd llm-service && venv\\Scripts\\uvicorn main:app --reload --port 8000",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:llm\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
