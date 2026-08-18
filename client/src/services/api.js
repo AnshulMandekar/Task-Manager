@@ -32,10 +32,23 @@ async function request(endpoint, options = {}) {
     throw new Error('Unauthorized');
   }
 
-  const data = await res.json();
+  let data = null;
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    try {
+      data = await res.json();
+    } catch (e) {
+      console.error('Error parsing JSON response:', e);
+    }
+  }
 
   if (!res.ok) {
-    throw new Error(data.error || 'Something went wrong');
+    const errorMsg = (data && data.error) || `Server error: ${res.status} ${res.statusText}`;
+    throw new Error(errorMsg);
+  }
+
+  if (data === null) {
+    throw new Error('Server returned an empty or invalid response');
   }
 
   return data;
