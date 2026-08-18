@@ -1,5 +1,7 @@
 # 🚀 TaskFlow — AI-Powered Task Manager
 
+🌐 **Live Deployed App**: [https://taskmanager-client-dfn8.onrender.com](https://taskmanager-client-dfn8.onrender.com)
+
 TaskFlow is an intelligent, modern, mobile-first personal task manager that leverages the MERN stack coupled with a Python FastAPI microservice powered by **Gemini 3.5 Flash** to bring automation and contextual intelligence to task management.
 
 With TaskFlow, users can manage their academic, professional, and personal tasks seamlessly. They can create tasks manually or just describe them in natural language, upload screenshots of syllabus lists or work emails, chat with an AI assistant that knows their task calendar, and receive web push reminders right when deadlines are close.
