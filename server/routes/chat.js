@@ -124,7 +124,16 @@ router.post('/sessions/:id/messages', upload.single('image'), async (req, res) =
 
       const result = response.data;
 
-      // Auto-save the task
+      // Build attachments: start with LLM-extracted links, then add the screenshot
+      const taskAttachments = Array.isArray(result.attachments) ? result.attachments.slice(0, 9) : [];
+      // Attach the uploaded screenshot itself to the task
+      taskAttachments.push({
+        type: 'image',
+        url: imageBase64,
+        label: 'Uploaded screenshot',
+      });
+
+      // Auto-save the task with subTasks and attachments
       const task = new Task({
         userId: req.user.id,
         title: result.title,
@@ -132,6 +141,8 @@ router.post('/sessions/:id/messages', upload.single('image'), async (req, res) =
         category: result.category,
         dueDate: result.dueDate ? new Date(result.dueDate) : null,
         source: 'chat-image',
+        subTasks: Array.isArray(result.subTasks) ? result.subTasks.slice(0, 20) : [],
+        attachments: taskAttachments,
       });
       await task.save();
 
@@ -149,6 +160,8 @@ router.post('/sessions/:id/messages', upload.single('image'), async (req, res) =
           description: result.description,
           category: result.category,
           dueDate: result.dueDate,
+          subTasks: Array.isArray(result.subTasks) ? result.subTasks : [],
+          attachments: taskAttachments,
         },
       });
 
@@ -199,9 +212,18 @@ router.post('/sessions/:id/messages', upload.single('image'), async (req, res) =
         category: result.task.category,
         dueDate: result.task.dueDate ? new Date(result.task.dueDate) : null,
         source: 'chat-text',
+        subTasks: Array.isArray(result.task.subTasks) ? result.task.subTasks.slice(0, 20) : [],
+        attachments: Array.isArray(result.task.attachments) ? result.task.attachments.slice(0, 10) : [],
       });
       await task.save();
-      savedTaskObj = result.task;
+      savedTaskObj = {
+        title: result.task.title,
+        description: result.task.description || '',
+        category: result.task.category,
+        dueDate: result.task.dueDate,
+        subTasks: Array.isArray(result.task.subTasks) ? result.task.subTasks : [],
+        attachments: Array.isArray(result.task.attachments) ? result.task.attachments : [],
+      };
     }
 
     // Save history in MongoDB

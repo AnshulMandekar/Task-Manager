@@ -334,6 +334,56 @@ export default function ChatPage() {
                           {msg.taskResult.description}
                         </p>
                       )}
+
+                      {/* Sub-tasks list */}
+                      {msg.taskResult.subTasks && msg.taskResult.subTasks.length > 0 && (
+                        <div className="task-result-subtasks">
+                          <p className="task-result-subtasks-label">📋 Sub-tasks:</p>
+                          <ul className="task-result-subtask-list">
+                            {msg.taskResult.subTasks.map((st, stIdx) => (
+                              <li key={stIdx} className="task-result-subtask-item">
+                                <span className="task-result-subtask-bullet">○</span>
+                                <span>{st.title}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Attachments list */}
+                      {msg.taskResult.attachments && msg.taskResult.attachments.length > 0 && (
+                        <div className="task-result-attachments">
+                          <p className="task-result-attachments-label">📎 Attachments:</p>
+                          <ul className="task-result-attachment-list">
+                            {msg.taskResult.attachments.map((att, attIdx) => (
+                              <li key={attIdx} className="task-result-attachment-item">
+                                {att.type === 'image' ? (
+                                  <div className="task-result-attachment-image">
+                                    <img
+                                      src={att.url}
+                                      alt={att.label || 'Screenshot'}
+                                      className="task-result-thumbnail"
+                                      onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                    <span className="task-result-att-label">{att.label || 'Screenshot'}</span>
+                                  </div>
+                                ) : (
+                                  <a
+                                    href={att.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="task-result-link"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    🔗 {att.label || att.url}
+                                  </a>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       <div className="task-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         {msg.taskResult.dueDate ? (
                           <span className="task-due" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>

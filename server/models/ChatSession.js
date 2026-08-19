@@ -19,6 +19,14 @@ const chatMessageSchema = new mongoose.Schema({
     description: { type: String },
     category: { type: String, enum: ['College', 'Job', 'Study'] },
     dueDate: { type: Date, default: null },
+    subTasks: {
+      type: [{ title: { type: String }, completed: { type: Boolean, default: false } }],
+      default: [],
+    },
+    attachments: {
+      type: [{ type: { type: String, enum: ['image', 'link'] }, url: { type: String }, label: { type: String, default: '' } }],
+      default: [],
+    },
   },
   isError: {
     type: Boolean,

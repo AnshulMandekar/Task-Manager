@@ -35,6 +35,12 @@ SYSTEM_PROMPT = """You are a task classification assistant. Given the user's inp
 2. description — optional longer description of the task (max 500 chars, or empty string if not applicable)
 3. category — exactly one of: "College", "Job", "Study"
 4. dueDate — ISO 8601 date string (e.g., "2026-08-20T23:59:00") if a due date is mentioned or can be inferred. Use null if no date is mentioned. Today's date is {today}.
+5. subTasks — an array of actionable sub-task objects. Break the task down into concrete steps the user should follow to complete it. Each sub-task has a "title" field (max 200 chars). Generate 2-10 sub-tasks depending on complexity. If the task is very simple, use an empty array.
+6. attachments — an array of link attachments found in the input. For each URL detected in the user's text, create an object with:
+   - "type": always "link"
+   - "url": the full URL string
+   - "label": a short human-readable label for the link (e.g. "Course page", "Assignment PDF")
+   If no URLs are present, use an empty array.
 
 Classification rules:
 - "College": coursework, assignments, exams, class projects, campus activities, university-related tasks, homework, lab reports, lectures
@@ -45,7 +51,7 @@ If the input is ambiguous, make your best guess based on context clues.
 If the input contains multiple tasks, extract only the most prominent/first one.
 
 Respond ONLY with valid JSON in this exact format, no explanation, no markdown:
-{{"title": "...", "description": "...", "category": "...", "dueDate": "..." or null}}"""
+{{"title": "...", "description": "...", "category": "...", "dueDate": "..." or null, "subTasks": [{{"title": "..."}}, ...], "attachments": [{{"type": "link", "url": "...", "label": "..."}}, ...]}}"""
 
 
 def parse_llm_response(text: str) -> dict:
@@ -94,11 +100,38 @@ def parse_llm_response(text: str) -> dict:
     else:
         due_date = None
 
+    # Parse sub-tasks
+    raw_sub_tasks = result.get("subTasks", [])
+    sub_tasks = []
+    if isinstance(raw_sub_tasks, list):
+        for st in raw_sub_tasks[:20]:  # cap at 20
+            if isinstance(st, dict) and st.get("title"):
+                sub_tasks.append({"title": str(st["title"])[:200]})
+            elif isinstance(st, str) and st.strip():
+                sub_tasks.append({"title": st.strip()[:200]})
+
+    # Parse attachments (links extracted from input)
+    raw_attachments = result.get("attachments", [])
+    attachments = []
+    if isinstance(raw_attachments, list):
+        for att in raw_attachments[:10]:  # cap at 10
+            if isinstance(att, dict) and att.get("url"):
+                att_type = str(att.get("type", "link"))
+                if att_type not in ("link", "image"):
+                    att_type = "link"
+                attachments.append({
+                    "type": att_type,
+                    "url": str(att["url"])[:2000],
+                    "label": str(att.get("label", ""))[:200],
+                })
+
     return {
         "title": title,
         "description": description,
         "category": category,
         "dueDate": due_date,
+        "subTasks": sub_tasks,
+        "attachments": attachments,
     }
 
 
@@ -197,6 +230,8 @@ Intent classification and actions:
      - description: optional description
      - category: exactly one of: "College", "Job", "Study"
      - dueDate: ISO 8601 date string if mentioned or can be inferred (relative to today's date {today}). Use null if no date is mentioned.
+     - subTasks: an array of actionable sub-task steps to complete this task. Each has a "title" (max 200 chars). Generate 2-10 sub-tasks depending on complexity. Use empty array for very simple tasks.
+     - attachments: an array of link attachments for any URLs the user mentioned. Each has "type": "link", "url": the URL, "label": a short label. Use empty array if no URLs found.
    Also provide a friendly response in "reply" confirming that you are adding the task.
 
 2. If the user is asking questions about their tasks (e.g. "what should I do today?", "what is pending for Job?", "do I have any exams?"):
@@ -215,7 +250,9 @@ You must respond ONLY with valid JSON in this exact structure, no extra commenta
     "title": "...",
     "description": "...",
     "category": "College" | "Job" | "Study",
-    "dueDate": "ISO 8601 date string or null"
+    "dueDate": "ISO 8601 date string or null",
+    "subTasks": [{{"title": "..."}}, ...],
+    "attachments": [{{"type": "link", "url": "...", "label": "..."}}, ...]
   }}
 }}
 If "action" is "reply", set "task": null."""
@@ -270,6 +307,31 @@ def parse_chat_response(text: str) -> dict:
                 due_date = None
         else:
             due_date = None
+
+        # Parse sub-tasks from chat response
+        raw_sub_tasks = task_data.get("subTasks", [])
+        sub_tasks = []
+        if isinstance(raw_sub_tasks, list):
+            for st in raw_sub_tasks[:20]:
+                if isinstance(st, dict) and st.get("title"):
+                    sub_tasks.append({"title": str(st["title"])[:200]})
+                elif isinstance(st, str) and st.strip():
+                    sub_tasks.append({"title": st.strip()[:200]})
+
+        # Parse attachments from chat response
+        raw_attachments = task_data.get("attachments", [])
+        attachments = []
+        if isinstance(raw_attachments, list):
+            for att in raw_attachments[:10]:
+                if isinstance(att, dict) and att.get("url"):
+                    att_type = str(att.get("type", "link"))
+                    if att_type not in ("link", "image"):
+                        att_type = "link"
+                    attachments.append({
+                        "type": att_type,
+                        "url": str(att["url"])[:2000],
+                        "label": str(att.get("label", ""))[:200],
+                    })
         
         return {
             "action": "create_task",
@@ -278,7 +340,9 @@ def parse_chat_response(text: str) -> dict:
                 "title": title,
                 "description": description,
                 "category": category,
-                "dueDate": due_date
+                "dueDate": due_date,
+                "subTasks": sub_tasks,
+                "attachments": attachments,
             }
         }
     
