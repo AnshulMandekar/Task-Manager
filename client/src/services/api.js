@@ -101,6 +101,41 @@ export async function deleteTask(id) {
   });
 }
 
+// ─── Sub-Tasks ─────────────────────────────────
+export async function addSubTask(taskId, title) {
+  return request(`/tasks/${taskId}/subtasks`, {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function updateSubTask(taskId, subId, updates) {
+  return request(`/tasks/${taskId}/subtasks/${subId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteSubTask(taskId, subId) {
+  return request(`/tasks/${taskId}/subtasks/${subId}`, {
+    method: 'DELETE',
+  });
+}
+
+// ─── Attachments ───────────────────────────────
+export async function addAttachment(taskId, attachment) {
+  return request(`/tasks/${taskId}/attachments`, {
+    method: 'POST',
+    body: JSON.stringify(attachment),
+  });
+}
+
+export async function deleteAttachment(taskId, attId) {
+  return request(`/tasks/${taskId}/attachments/${attId}`, {
+    method: 'DELETE',
+  });
+}
+
 // ─── Chat / Sessions ──────────────────────────
 export async function getChatSessions() {
   return request('/chat/sessions');

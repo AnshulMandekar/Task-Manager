@@ -5,6 +5,15 @@ export default function TaskCard({ task, onUpdate, onDelete, onEdit, style }) {
   const isDone = task.status === 'done';
   const categoryClass = task.category.toLowerCase();
 
+  // Sub-task progress
+  const subTasks = task.subTasks || [];
+  const completedSubs = subTasks.filter(st => st.completed).length;
+  const totalSubs = subTasks.length;
+  const subProgress = totalSubs > 0 ? (completedSubs / totalSubs) * 100 : 0;
+
+  // Attachment count
+  const attachmentCount = (task.attachments || []).length;
+
   function getDueLabel() {
     if (!task.dueDate) return null;
 
@@ -95,6 +104,24 @@ export default function TaskCard({ task, onUpdate, onDelete, onEdit, style }) {
               <ClockIcon size={12} /> {dueLabel.text}
             </span>
           )}
+          {totalSubs > 0 && (
+            <span className="task-subtask-indicator">
+              <span className="subtask-progress-bar">
+                <span
+                  className="subtask-progress-fill"
+                  style={{ width: `${subProgress}%` }}
+                />
+              </span>
+              <span className="subtask-progress-text">
+                {completedSubs}/{totalSubs}
+              </span>
+            </span>
+          )}
+          {attachmentCount > 0 && (
+            <span className="task-attachment-indicator">
+              📎 {attachmentCount}
+            </span>
+          )}
         </div>
       </div>
 
@@ -111,3 +138,4 @@ export default function TaskCard({ task, onUpdate, onDelete, onEdit, style }) {
     </div>
   );
 }
+

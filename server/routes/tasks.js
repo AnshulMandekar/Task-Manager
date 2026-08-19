@@ -50,7 +50,7 @@ router.get('/today', async (req, res) => {
 // POST /api/tasks — create task
 router.post('/', async (req, res) => {
   try {
-    const { title, description, category, dueDate, source } = req.body;
+    const { title, description, category, dueDate, source, subTasks, attachments } = req.body;
 
     if (!title || !category) {
       return res.status(400).json({ error: 'Title and category are required.' });
@@ -67,6 +67,8 @@ router.post('/', async (req, res) => {
       category,
       dueDate: dueDate ? new Date(dueDate) : null,
       source: source || 'manual',
+      subTasks: Array.isArray(subTasks) ? subTasks.slice(0, 20) : [],
+      attachments: Array.isArray(attachments) ? attachments.slice(0, 10) : [],
     });
 
     await task.save();
@@ -80,7 +82,7 @@ router.post('/', async (req, res) => {
 // PUT /api/tasks/:id — update task
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, category, dueDate, status } = req.body;
+    const { title, description, category, dueDate, status, subTasks, attachments } = req.body;
     const update = {};
 
     if (title !== undefined) update.title = title.trim();
@@ -98,6 +100,8 @@ router.put('/:id', async (req, res) => {
       }
       update.status = status;
     }
+    if (subTasks !== undefined) update.subTasks = Array.isArray(subTasks) ? subTasks.slice(0, 20) : [];
+    if (attachments !== undefined) update.attachments = Array.isArray(attachments) ? attachments.slice(0, 10) : [];
 
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
@@ -135,4 +139,134 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// ─── Sub-Task Routes ──────────────────────────
+
+// POST /api/tasks/:id/subtasks — add a sub-task
+router.post('/:id/subtasks', async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Sub-task title is required.' });
+    }
+
+    const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    if (task.subTasks.length >= 20) {
+      return res.status(400).json({ error: 'Maximum 20 sub-tasks allowed per task.' });
+    }
+
+    task.subTasks.push({ title: title.trim() });
+    await task.save();
+    res.status(201).json(task);
+  } catch (err) {
+    console.error('Add sub-task error:', err);
+    res.status(500).json({ error: 'Failed to add sub-task.' });
+  }
+});
+
+// PUT /api/tasks/:id/subtasks/:subId — update a sub-task
+router.put('/:id/subtasks/:subId', async (req, res) => {
+  try {
+    const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    const subTask = task.subTasks.id(req.params.subId);
+    if (!subTask) {
+      return res.status(404).json({ error: 'Sub-task not found.' });
+    }
+
+    const { title, completed } = req.body;
+    if (title !== undefined) subTask.title = title.trim();
+    if (completed !== undefined) subTask.completed = Boolean(completed);
+
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Update sub-task error:', err);
+    res.status(500).json({ error: 'Failed to update sub-task.' });
+  }
+});
+
+// DELETE /api/tasks/:id/subtasks/:subId — remove a sub-task
+router.delete('/:id/subtasks/:subId', async (req, res) => {
+  try {
+    const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    const subTask = task.subTasks.id(req.params.subId);
+    if (!subTask) {
+      return res.status(404).json({ error: 'Sub-task not found.' });
+    }
+
+    task.subTasks.pull(req.params.subId);
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Delete sub-task error:', err);
+    res.status(500).json({ error: 'Failed to delete sub-task.' });
+  }
+});
+
+// ─── Attachment Routes ────────────────────────
+
+// POST /api/tasks/:id/attachments — add an attachment
+router.post('/:id/attachments', async (req, res) => {
+  try {
+    const { type, url, label } = req.body;
+
+    if (!type || !['image', 'link'].includes(type)) {
+      return res.status(400).json({ error: 'Attachment type must be "image" or "link".' });
+    }
+    if (!url || !url.trim()) {
+      return res.status(400).json({ error: 'Attachment URL is required.' });
+    }
+
+    const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    if (task.attachments.length >= 10) {
+      return res.status(400).json({ error: 'Maximum 10 attachments allowed per task.' });
+    }
+
+    task.attachments.push({ type, url: url.trim(), label: label?.trim() || '' });
+    await task.save();
+    res.status(201).json(task);
+  } catch (err) {
+    console.error('Add attachment error:', err);
+    res.status(500).json({ error: 'Failed to add attachment.' });
+  }
+});
+
+// DELETE /api/tasks/:id/attachments/:attId — remove an attachment
+router.delete('/:id/attachments/:attId', async (req, res) => {
+  try {
+    const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    const att = task.attachments.id(req.params.attId);
+    if (!att) {
+      return res.status(404).json({ error: 'Attachment not found.' });
+    }
+
+    task.attachments.pull(req.params.attId);
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error('Delete attachment error:', err);
+    res.status(500).json({ error: 'Failed to delete attachment.' });
+  }
+});
+
 module.exports = router;
+

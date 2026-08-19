@@ -1799,3 +1799,293 @@
   }
 }
 
+
+/* ─── Sub-Tasks (Modal Editor) ─────────────────────────── */
+.form-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-hint);
+}
+
+.subtask-input-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.subtask-input-row .form-input {
+  flex: 1;
+}
+
+.btn-small {
+  padding: 6px 14px !important;
+  font-size: 1rem !important;
+  min-width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.subtask-list {
+  list-style: none;
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--divider);
+  transition: all var(--transition-fast);
+  animation: fadeInUp 0.2s ease;
+}
+
+.subtask-item:hover {
+  border-color: var(--text-hint);
+}
+
+.subtask-item.completed .subtask-title {
+  text-decoration: line-through;
+  color: var(--text-hint);
+}
+
+.subtask-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--divider);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: none;
+  padding: 0;
+  color: white;
+}
+
+.subtask-checkbox:hover {
+  border-color: var(--primary);
+}
+
+.subtask-checkbox.checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.subtask-title {
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.subtask-remove {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-hint);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  opacity: 0.5;
+}
+
+.subtask-remove:hover {
+  opacity: 1;
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+
+/* ─── Attachments (Modal Editor) ───────────────────────── */
+.attachment-type-toggle {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.att-type-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--divider);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.att-type-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.att-type-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.attachment-input-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.attachment-input-row .form-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.att-label-input {
+  max-width: 140px;
+}
+
+.attachment-list {
+  list-style: none;
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--divider);
+  transition: all var(--transition-fast);
+  animation: fadeInUp 0.2s ease;
+}
+
+.attachment-item:hover {
+  border-color: var(--text-hint);
+}
+
+.attachment-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.attachment-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--divider);
+}
+
+.attachment-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-surface);
+  border-radius: var(--radius-sm);
+}
+
+.attachment-details {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.attachment-url {
+  font-size: 0.82rem;
+  color: var(--primary);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 260px;
+}
+
+.attachment-url:hover {
+  text-decoration: underline;
+}
+
+.attachment-type-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-hint);
+}
+
+
+/* ─── Task Card Indicators ─────────────────────────────── */
+.task-subtask-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.subtask-progress-bar {
+  width: 36px;
+  height: 4px;
+  background: var(--divider);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.subtask-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+  display: block;
+}
+
+.subtask-progress-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.task-attachment-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}

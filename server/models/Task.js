@@ -1,5 +1,37 @@
 const mongoose = require('mongoose');
 
+const subTaskSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 200,
+  },
+  completed: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const attachmentSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['image', 'link'],
+    required: true,
+  },
+  url: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  label: {
+    type: String,
+    trim: true,
+    maxlength: 200,
+    default: '',
+  },
+});
+
 const taskSchema = new mongoose.Schema(
   {
     userId: {
@@ -38,6 +70,16 @@ const taskSchema = new mongoose.Schema(
       type: String,
       enum: ['manual', 'chat-text', 'chat-image'],
       default: 'manual',
+    },
+    subTasks: {
+      type: [subTaskSchema],
+      default: [],
+      validate: [arr => arr.length <= 20, 'A task can have at most 20 sub-tasks.'],
+    },
+    attachments: {
+      type: [attachmentSchema],
+      default: [],
+      validate: [arr => arr.length <= 10, 'A task can have at most 10 attachments.'],
     },
     notifiedDueSoon: {
       type: Boolean,
